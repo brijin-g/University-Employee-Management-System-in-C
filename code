@@ -1,0 +1,130 @@
+#include <gtk/gtk.h>
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_EMPLOYEES 10
+
+struct Employee {
+    int id;
+    char name[100];
+    int age;
+    double salary;
+};
+
+GtkWidget *window, *grid, *idLabel, *nameLabel, *ageLabel, *salaryLabel, *idEntry, *nameEntry, *ageEntry, *salaryEntry, *addButton;
+
+struct Employee employees[MAX_EMPLOYEES] = {0};
+int numEmployees = 0;
+
+void addEmployee(GtkWidget *widget, gpointer data) {
+    if (numEmployees >= MAX_EMPLOYEES) {
+        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Maximum number of employees reached!");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        return;
+    }
+
+    const char *idString = gtk_entry_get_text(GTK_ENTRY(idEntry));
+    const char *nameString = gtk_entry_get_text(GTK_ENTRY(nameEntry));
+    const char *ageString = gtk_entry_get_text(GTK_ENTRY(ageEntry));
+    const char *salaryString = gtk_entry_get_text(GTK_ENTRY(salaryEntry));
+
+    if (strlen(idString) == 0 || strlen(nameString) == 0 || strlen(ageString) == 0 || strlen(salaryString) == 0) {
+        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Please fill in all fields!");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        return;
+    }
+
+    int id = atoi(idString);
+    int age = atoi(ageString);
+    double salary = atof(salaryString);
+
+    strcpy(employees[numEmployees].name, nameString);
+    employees[numEmployees].id = id;
+    employees[numEmployees].age = age;
+    employees[numEmployees].salary = salary;
+    numEmployees++;
+
+    gtk_entry_set_text(GTK_ENTRY(idEntry), "");
+    gtk_entry_set_text(GTK_ENTRY(nameEntry), "");
+    gtk_entry_set_text(GTK_ENTRY(ageEntry), "");
+    gtk_entry_set_text(GTK_ENTRY(salaryEntry), "");
+
+    GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE, "Employee added successfully!");
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+
+    // Write employees to CSV file
+    FILE *fp = fopen("emp.csv", "a");
+    if (fp == NULL) {
+        printf("Error opening file!\n");
+        return;
+    }
+    if (numEmployees == 1) {
+        fprintf(fp, "ID,Name,Age,Salary\n");
+    }
+    fprintf(fp, "%d,%s,%d,%f\n", employees[numEmployees-1].id, employees[numEmployees-1].name, employees[numEmployees-1].age, employees[numEmployees-1].salary);
+    fclose(fp);
+}
+
+const char *getEntryText(GtkWidget *entry) {
+    const char *text = gtk_entry_get_text(GTK_ENTRY(entry));
+    if (strlen(text) == 0) {
+        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Please fill in all fields!");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        return NULL;
+    }
+    return text;
+}
+
+int main(int argc, char *argv[]) {
+    GtkWidget *idLabel, *nameLabel, *ageLabel, *salaryLabel, *addButton;
+
+    gtk_init(&argc, &argv);
+
+    // Create the main window
+    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(window), "Employee Management System");
+    g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+
+    // Create the grid to hold the input fields and button
+    grid = gtk_grid_new();
+    gtk_container_add(GTK_CONTAINER(window), grid);
+
+    // Add the ID field
+    idLabel = gtk_label_new("ID:");
+    gtk_grid_attach(GTK_GRID(grid), idLabel, 0, 0, 1, 1);
+    idEntry = gtk_entry_new();
+    gtk_grid_attach(GTK_GRID(grid), idEntry, 1, 0, 1, 1);
+
+    // Add the name field
+    nameLabel = gtk_label_new("Name:");
+    gtk_grid_attach(GTK_GRID(grid), nameLabel, 0, 1, 1, 1);
+    nameEntry = gtk_entry_new();
+    gtk_grid_attach(GTK_GRID(grid), nameEntry, 1, 1, 1, 1);
+
+    // Add the age field
+    ageLabel = gtk_label_new("Age:");
+    gtk_grid_attach(GTK_GRID(grid), ageLabel, 0, 2, 1, 1);
+    ageEntry = gtk_entry_new();
+    gtk_grid_attach(GTK_GRID(grid), ageEntry, 1, 2, 1, 1);
+
+    // Add the salary field
+    salaryLabel = gtk_label_new("Salary:");
+    gtk_grid_attach(GTK_GRID(grid), salaryLabel, 0, 3, 1, 1);
+    salaryEntry = gtk_entry_new();
+    gtk_grid_attach(GTK_GRID(grid), salaryEntry, 1, 3, 1, 1);
+
+    // Add the "Add" button
+    addButton = gtk_button_new_with_label("Add Employee");
+    g_signal_connect(addButton, "clicked", G_CALLBACK(addEmployee), NULL);
+    gtk_grid_attach(GTK_GRID(grid), addButton, 0, 4, 2, 1);
+
+    // Show the window and start the main loop
+    gtk_widget_show_all(window);
+    gtk_main();
+
+    return 0;
+}
